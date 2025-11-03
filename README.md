@@ -1,0 +1,11 @@
+## PPG to Blood Pressure
+
+The purpose of this code is to show the signal processing pipeline of predicting blood pressure from PPG signals.
+
+The scripts should be run in the following order:
+
+1. PPG_to_BP_prediction.ipynb - This script runs the necessary preprocessing on raw PPG signals from the PPGBP dataset. It saves preprocessed data into ppg_signals.mat and biomarkers_PPGBP.csv.
+
+2. PPG_to_BP_prediction.ipynb - This scripts fits XGBoost models to cross-validation schemes with and without "leakage", or pulses from the same subject used both training and test sets.
+
+3.  
