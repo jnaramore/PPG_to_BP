@@ -1,23 +1,28 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
+# -----------------------------------------------
+# PPG-BP signal functions
+# 
+# This library contains several functions to interface with the
+# pyPPG library for processing PPG-BP signals. This includes loading,
+# preprocessing, fiducial point detection, and biomarker extraction.
+#
+# These functions are needed for short PPG segments, e.g., single beats.
+#
+# Additionally, a modified version of the QPPG beat detection algorithm
+# is included to detect beats in short PPG segments.
+# -----------------------------------------------
 
-from pyPPG import PPG, Fiducials, Biomarkers
-from pyPPG.datahandling import load_data, plot_fiducials, save_data
+import pandas as pd
+import numpy as np
+from pyPPG import PPG
 import pyPPG.preproc as PP
 import pyPPG.fiducials as FP
-import pyPPG.biomarkers as BM
-import pyPPG.ppg_sqi as SQI
-from pyPPG.ppg_bm.bm_extraction import get_biomarkers
 from pyPPG.ppg_bm.bm_extraction import BmExctator
-
 from dotmap import DotMap
-from scipy.signal import decimate
-from tqdm import tqdm
-import os
 
 
-
+# -----------------------------------------------
+# Load PPG-BP signal from text file
+# -----------------------------------------------
 def load_signal_PPGBP(file_id, data_dir, fs):
     
     data_path = data_dir + file_id + '.txt'
@@ -26,6 +31,9 @@ def load_signal_PPGBP(file_id, data_dir, fs):
 
     return data, time_sec
 
+# -----------------------------------------------
+# Preprocess PPG-BP signal
+# -----------------------------------------------
 def preprocess_ppgbp(data,fs,file_id, fL, fH, order, sm_wins):
     fs_data = fs
     start_sig = 0 # the first sample of the signal to be analysed
@@ -51,6 +59,9 @@ def preprocess_ppgbp(data,fs,file_id, fL, fH, order, sm_wins):
 
     return s
 
+# -----------------------------------------------
+# Merge fiducial points into a single DataFrame
+# -----------------------------------------------
 def merge_fiducials(ppg_fp, vpg_fp, apg_fp, jpg_fp):
     fiducials = pd.DataFrame()
     for temp_sig in (ppg_fp, vpg_fp, apg_fp, jpg_fp):
@@ -59,6 +70,9 @@ def merge_fiducials(ppg_fp, vpg_fp, apg_fp, jpg_fp):
 
     return fiducials
 
+# -----------------------------------------------
+# Find fiducial points in a PPG beat
+# -----------------------------------------------
 def find_fiducials(s,onsets):
     s.correct = True
     s_class = PPG(s, check_ppg_len=False)
@@ -87,7 +101,9 @@ def find_fiducials(s,onsets):
 
     return det_fp
 
-
+# -----------------------------------------------
+# Biomarker list
+# -----------------------------------------------
 biomarkers_lst = [
                     ["Tpi",   "Pulse interval, the time between the pulse onset and pulse offset", "[s]"],
                     ["Tsys",  "Systolic time, the time between the pulse onset and dicrotic notch", "[s]"],
@@ -194,6 +210,9 @@ biomarkers_lst = [
 header = ['name', 'definition', 'unit']
 biomarkers_lst = pd.DataFrame(biomarkers_lst, columns=header)
 
+# -----------------------------------------------
+# Find biomarkers in a PPG beat
+# -----------------------------------------------
 def find_biomarkers(s,fp):
     fs=s.fs
     ppg=s.ppg
@@ -240,6 +259,17 @@ def find_biomarkers(s,fp):
     df_biomarkers.loc[0] = lst
     return df_biomarkers
 
+#-----------------------------------------------
+# Detect PPG beats using the QPPG algorithm
+# 
+# Reference:
+#   Vest, Adriana Nicholson, Giulia Da Poian, Qiao Li, Chengyu Liu, Shamim Nemati, 
+#   Amit J. Shah and Gari D. CliQord. “An open source benchmarked toolbox for cardiovascular 
+#   waveform and interval analysis.” Physiological Measurement 39 (2018)
+# original reference:
+#   Li, Q., Clifford, G.D. "Dynamic time warping and machine learning for signal quality    
+#   assessment of pulsatile signals." Physiol Meas 33, 1491-1501 (2012).
+#-----------------------------------------------
 def qppg(data, fs=125, from_idx=0, to_idx=None):
     if to_idx is None:
         to_idx = len(data)
